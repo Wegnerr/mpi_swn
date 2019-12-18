@@ -1,6 +1,9 @@
 #include <mpi.h>
+#include "lib/detector.h"
+#include "lib/msg.h"
+#include "lib/token.h"
 
-main(int argc, char **argv) 
+int main(int argc, char **argv) 
 {
-
+    return 0;
 }

@@ -1,6 +1,7 @@
 #pragma once
+#include <stdint.h>
 
 struct token {
-    u32_t count;
+    uint32_t count;
     
-}
+};
