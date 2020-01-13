@@ -2,7 +2,8 @@
 #include <mpi.h>
 #include <time.h>
 #include <stdio.h>
-//#include "mechanics.h"
+#include "lib/mechanics.h"
+#include "lib/mechanics.c"
 #include "lib/detector.h"
 #include "lib/msg.h"
 #include "lib/token.h"
@@ -61,6 +62,17 @@ int main(int argc, char *argv[]) {
     if (size < 2) {
         fprintf(stderr, "Number of processes must be larger than 1 in order to run this example\n");
         MPI_Abort(MPI_COMM_WORLD, 1);
+    }if (rank == 0) {
+        token = 1;
+        my_send(&token, 1, MPI_INT, rank+1, 0, MPI_COMM_WORLD);
+        my_recv(&token, 1, MPI_INT, size-1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    } else {
+        my_recv(&token, 1, MPI_INT, rank-1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+	if (rank == size - 1)
+            dest = 0;
+        else
+            dest = rank + 1;
+	my_send(&token, 1, MPI_INT, dest, 0, MPI_COMM_WORLD);
     }
 
     if (rank == 0) {
