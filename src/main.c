@@ -3,6 +3,7 @@
 #include "lib/detector.h"
 #include "lib/msg.h"
 #include "lib/token.h"
+#include <unistd.h>
 
 /*
 Compile with mpicc main.c -o main
@@ -31,10 +32,12 @@ int main(int argc, char *argv[]) {
         printf("[%i] Token sent to process %i\n",
                 rank, rank+1);
         MPI_Recv(&token, 1, MPI_INT, size-1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+	sleep(1); //Print sync
         printf("[%i] Token received from process %i\n",
                 rank, size-1);
     } else {
         MPI_Recv(&token, 1, MPI_INT, rank-1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+	sleep(1); //Print sync
         printf("[%i] Token received from process %i\n",
                 rank, rank-1);
         if (rank == size - 1)
