@@ -1,9 +1,34 @@
+#include <pthread.h>
 #include <mpi.h>
+#include <time.h>
 #include <stdio.h>
+//#include "mechanics.h"
 #include "lib/detector.h"
 #include "lib/msg.h"
 #include "lib/token.h"
 #include <unistd.h>
+
+int receivedDetector;
+pthread_mutex_t lock;
+
+void* timeout() {
+    int msec = 0, trigger = 500; /* 500ms */
+    clock_t before = clock();
+
+    do {
+ 
+        clock_t difference = clock() - before;
+        msec = difference * 1000 / CLOCKS_PER_SEC;
+        
+        pthread_mutex_lock(&lock);
+        if(receivedDetector > 0)
+            msec = 0;
+        pthread_mutex_unlock(&lock);
+        printf("SOMETHING\n");
+    } while ( msec < trigger );
+  //  my_send();
+}
+
 
 /*
 Compile with mpicc main.c -o main
@@ -12,6 +37,19 @@ Run 	with mpirun -np <number_of_nodes> main
 */
 int main(int argc, char *argv[]) {
     int rank, size, token, dest;
+    struct msg message;
+    struct token tok;
+    struct detector detec;
+    pthread_t timeout_thread;
+    if(pthread_create(&timeout_thread, NULL, timeout, NULL)) {
+        fprintf(stderr, "Error creating thread\n");
+    return 1;
+
+    }
+
+    pthread_mutex_lock(&lock);
+    receivedDetector = 0; 
+    pthread_mutex_unlock(&lock); 
 
     // Initialize MPI environment
     MPI_Init (&argc, &argv);
@@ -49,7 +87,6 @@ int main(int argc, char *argv[]) {
         printf("[%i] Token sent to process %i\n",
                 rank, dest);
     }
-
     // Finalize MPI environment
     MPI_Finalize();
 

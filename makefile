@@ -1,5 +1,7 @@
 compile:
-	mpicc src/main.c -o main
-
+	mpicc src/main.c -lpthread -o main 
+run:
+	lamboot
+	mpirun -np 4 main
 clean:
 	rm main
