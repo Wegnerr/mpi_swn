@@ -9,7 +9,7 @@
 #include "lib/token.h"
 #include <unistd.h>
 
-int receivedDetector;
+int receivedMessage;
 pthread_mutex_t lock;
 
 void* timeout() {
@@ -22,12 +22,14 @@ void* timeout() {
         msec = difference * 1000 / CLOCKS_PER_SEC;
         
         pthread_mutex_lock(&lock);
-        if(receivedDetector > 0)
+        if(receivedMessage > 0)
             msec = 0;
+            receivedMessage = 0;
         pthread_mutex_unlock(&lock);
-        printf("SOMETHING\n");
+    
     } while ( msec < trigger );
-  //  my_send();
+    //my_send();
+    return NULL;
 }
 
 
@@ -49,7 +51,7 @@ int main(int argc, char *argv[]) {
     }
 
     pthread_mutex_lock(&lock);
-    receivedDetector = 0; 
+    receivedMessage = 0; 
     pthread_mutex_unlock(&lock); 
 
     // Initialize MPI environment
