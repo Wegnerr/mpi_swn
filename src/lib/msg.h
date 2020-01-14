@@ -4,6 +4,6 @@
 #include <stdint.h>
 
 struct msg {
-    struct token tok;
-    struct detector detec;
+    struct token* tok;
+    struct detector* detec;
 };
