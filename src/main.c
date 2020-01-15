@@ -92,6 +92,7 @@ int main(int argc, char *argv[]) {
 	send_message(message, 1, MPI_INT, dest, 0, MPI_COMM_WORLD);
     }
 
+    /*
     if (rank == 0) {
         //message = 1;
         MPI_Send(&message, 1, MPI_INT, rank+1, 0, MPI_COMM_WORLD);
@@ -115,7 +116,7 @@ int main(int argc, char *argv[]) {
         //message = 0;
         printf("[%i] Token sent to process %i\n",
                 rank, dest);
-    }
+    } */
     // Finalize MPI environment
     MPI_Finalize();
     pthread_join(timeout_thread, NULL);
