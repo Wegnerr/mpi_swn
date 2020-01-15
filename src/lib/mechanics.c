@@ -4,36 +4,44 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <mpi.h>
+#include <time.h>
 
-u_int32_t send_message(struct msg *message, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm){
+u_int32_t send_message(struct msg *message, int count, int dest, int tag){
     
 	srand(time(NULL));
 
-	if(rand() % 100 > 10)
+	if (dest > PROC_COUNT - 1)
+		dest = 0;
+	
+	if (rand() % 100 > 10)
 	{
-		MPI_Send(&message, 1, MPI_INT, dest+1, 0, MPI_COMM_WORLD);
-		printf("[%i] Message sent to process %i\n", dest, dest+1);
+		MPI_Send(message, 1, MPI_INT, dest+1, 0, MPI_COMM_WORLD);
+		printf("[%i] Message sent to process %i\n", dest - 1, dest);
 	}
 	else
 		printf("FAILED TO SEND FROM [%i]\n", dest);
 	return 0;
 }
 
-u_int32_t recv_message(struct msg *message, int count, int source, int my_rank, u_int32_t *process_token_id){
-	MPI_Recv(&message, 1, MPI_INT, source, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+u_int32_t recv_message(struct msg *message, int count, int source){
+	if (source < 0)
+		source = PROC_COUNT - 1;
 
-	switch(message->type) {
-		case MPI_DETEC:
-			message->detec->procList[my_rank] = *process_token_id;			 
-			break;
-		case MPI_TOKEN:
-			*process_token_id = message->tok->count + 1;
-			break;
-	}
-
-	sleep(1); //Printf() sync
+	MPI_Recv(message, 1, MPI_INT, source, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
     printf("[%i] Message received from process %i\n", source, source-1);
 
 	return 0;
 }
 
+u_int32_t find_max(int node_list[]) {
+	size_t size;
+    int i, max;
+    
+    max = node_list[0];
+    for (i = 0; i < PROC_COUNT; i++) {
+        if (node_list[i] > max)
+            max = node_list[i];
+    } 
+
+    return max;
+}

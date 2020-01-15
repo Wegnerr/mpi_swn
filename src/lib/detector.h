@@ -1,9 +1,9 @@
 #pragma once
 #include <stdint.h>
 
-#define PROC_COUNT 10
+#define PROC_COUNT 4
 
 struct detector {
-    uint32_t procId;
-    uint32_t procList[PROC_COUNT];
+    uint32_t proc_id;
+    uint32_t proc_list[PROC_COUNT];
 };
