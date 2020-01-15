@@ -40,11 +40,6 @@ void* timeout(void *source) {
 }
 
 
-/*
-Compile with mpicc main.c -o main
-Run 	with mpirun -np <number_of_nodes> main
-
-*/
 int main(int argc, char *argv[]) {
     int rank, size, dest, hasToken;
     struct msg message;
@@ -67,6 +62,8 @@ int main(int argc, char *argv[]) {
     receivedMessage = 0; 
     pthread_mutex_unlock(&lock); 
 
+
+    //TO-DO
     if (size < 2) {
         fprintf(stderr, "Number of processes must be larger than 1 in order to run this example\n");
         MPI_Abort(MPI_COMM_WORLD, 1);

@@ -3,7 +3,13 @@
 #include "detector.h"
 #include <stdint.h>
 
+enum msg_type {
+    MPI_DETEC,
+    MPI_TOKEN,
+};
+
 struct msg {
     struct token* tok;
     struct detector* detec;
+    enum msg_type type;
 };
