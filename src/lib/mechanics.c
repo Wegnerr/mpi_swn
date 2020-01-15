@@ -19,15 +19,15 @@ u_int32_t send_message(struct msg *message, int count, MPI_Datatype datatype, in
 	return 0;
 }
 
-u_int32_t recv_message(struct msg *message, int count, MPI_Datatype datatype, int source, int tag, MPI_Comm communicator, MPI_Status* status){
+u_int32_t recv_message(struct msg *message, int count, int source, int my_rank, u_int32_t *process_token_id){
 	MPI_Recv(&message, 1, MPI_INT, source, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
-	//TO-DO
 	switch(message->type) {
 		case MPI_DETEC:
-			message->detector->procList[dest] = 
+			message->detec->procList[my_rank] = *process_token_id;			 
 			break;
 		case MPI_TOKEN:
+			*process_token_id = message->tok->count + 1;
 			break;
 	}
 

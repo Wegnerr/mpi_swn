@@ -13,3 +13,5 @@ struct msg {
     struct detector* detec;
     enum msg_type type;
 };
+
+//TODO dodac msg zlecenia retransmisji

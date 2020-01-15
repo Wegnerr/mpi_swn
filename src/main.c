@@ -42,7 +42,8 @@ void* timeout(void *source) {
 
 int main(int argc, char *argv[]) {
     int rank, size, dest, hasToken;
-    struct msg message;
+    u_int32_t *process_token_id;
+    struct msg *message;
     pthread_t timeout_thread;
 
     // Initialize MPI environment
@@ -69,15 +70,26 @@ int main(int argc, char *argv[]) {
         MPI_Abort(MPI_COMM_WORLD, 1);
     }if (rank == 0) {
         hasToken = 1;
-        send_message(&message, 1, MPI_INT, rank+1, 0, MPI_COMM_WORLD);
-        recv_message(&message, 1, MPI_INT, size-1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        send_message(message, 1, MPI_INT, rank+1, 0, MPI_COMM_WORLD);
+        recv_message(message, 1, size-1, rank, process_token_id);
+        if(message->detec->procId == rank){
+				// TODO implementacja zlecenia retransmisji 
+		} else {
+            // send_message // przeslanie detectora dalej
+        }
+			
     } else {
-        recv_message(&message, 1, MPI_INT, rank-1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        recv_message(message, 1, rank-1, rank, process_token_id);
+        if(message->detec->procId == rank){
+				// TODO implementacja zlecenia retransmisji 
+		} else {
+        // send_message // przeslanie detectora dalej
+        }
 	if (rank == size - 1)
             dest = 0;
         else
             dest = rank + 1;
-	send_message(&message, 1, MPI_INT, dest, 0, MPI_COMM_WORLD);
+	send_message(message, 1, MPI_INT, dest, 0, MPI_COMM_WORLD);
     }
 
     if (rank == 0) {

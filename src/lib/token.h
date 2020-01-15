@@ -2,6 +2,6 @@
 #include <stdint.h>
 
 struct token {
-    uint32_t count;
+    u_int32_t count;
     
 };
