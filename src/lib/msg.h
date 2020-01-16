@@ -13,7 +13,7 @@ struct msg {
     struct token* tok;
     struct detector* detec;
     struct retrans* retr;
-    enum msg_type type;
+    int type;
 };
 
 //TODO dodac msg zlecenia retransmisji

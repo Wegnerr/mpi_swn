@@ -6,7 +6,7 @@
 #include <mpi.h>
 #include <time.h>
 
-u_int32_t send_message(struct msg *message, int count, int dest, int tag){
+u_int32_t send_message(struct msg *message, int count, MPI_Datatype datatype, int dest, int tag){
     
 	srand(time(NULL));
 
@@ -15,7 +15,8 @@ u_int32_t send_message(struct msg *message, int count, int dest, int tag){
 	
 	if (rand() % 100 > 10)
 	{
-		MPI_Send(message, 1, MPI_INT, dest+1, 0, MPI_COMM_WORLD);
+		MPI_Send(message, 1, datatype, dest+1, 0, MPI_COMM_WORLD);
+		sleep(10);
 		printf("[%i] Message sent to process %i\n", dest - 1, dest);
 	}
 	else
@@ -23,11 +24,12 @@ u_int32_t send_message(struct msg *message, int count, int dest, int tag){
 	return 0;
 }
 
-u_int32_t recv_message(struct msg *message, int count, int source){
+u_int32_t recv_message(struct msg *message, int count, MPI_Datatype datatype, int source){
+	printf("Entered recv_message");
 	if (source < 0)
 		source = PROC_COUNT - 1;
 
-	MPI_Recv(message, 1, MPI_INT, source, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+	MPI_Recv(message, 1, datatype, source, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
     printf("[%i] Message received from process %i\n", source, source-1);
 
 	return 0;
