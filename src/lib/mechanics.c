@@ -15,13 +15,13 @@ u_int32_t send_message(int *message, int count, int dest){
 	if (dest > PROC_COUNT - 1)
 		dest = 0;
 	
-	if (rand() % 100 > 10)
+	//if (rand() % 100 > 10)
 	{
 		MPI_Send(message, count, MPI_INT, dest, 0, MPI_COMM_WORLD);
 		printf("[%i] Message sent to process %i\n", dest - 1, dest);
 	}
-	else
-		printf("FAILED TO SEND FROM [%i]\n", dest);
+	//else
+	//	printf("FAILED TO SEND FROM [%i]\n", dest);
 	return 0;
 }
 
@@ -30,9 +30,7 @@ u_int32_t recv_message(int *message , int count, int source){
 		source = PROC_COUNT - 1;
 
 	MPI_Recv(message, count, MPI_INT, source, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-	//printf("[%i], [%i], [%i], [%i], [%i], [%i], [%i], [%i], [%i]\n", 
-	//	message[0], message[1], message[2], message[3], message[4], message[5], message[6], message[7], message[8]);
-	    printf("[%i] Message received from process %i\n", source, source-1);
+	printf("[%i] Message received from process %i\n", source, source-1);
 
 	return 0;
 }

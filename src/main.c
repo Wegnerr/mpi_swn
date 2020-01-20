@@ -23,7 +23,7 @@ void* timeout(void *source) {
 
     source_node = *((int*) source);
     msec = 0;
-    trigger = 5000;
+    trigger = 10000;
     before = clock();
         do {
  
@@ -43,7 +43,7 @@ void* timeout(void *source) {
         memset(message, 0, SIZE * sizeof(int));
         message[0] = 1;
         message[3] = source_node;
-
+        printf("%i :: %i\n\n", message[3], source_node);
         //printf("Sending detector to [%i]\n", source_node);
         send_message(message, 1, source_node + 1);
         free(message);
@@ -91,9 +91,12 @@ int main(int argc, char *argv[]) {
     }
     
     while (1) {
-        memset(message, 0, SIZE * sizeof(int));
+        memset(message, 0, 5 * sizeof(int));
         recv_message(message, SIZE, rank - 1);
-        
+         printf("[%i} : [%i], [%i], [%i], [%i], [%i], [%i], [%i], [%i], [%i]\n", 
+		                rank, message[0], message[1], message[2], message[3], message[4], message[5], message[6], message[7], message[8]);
+	
+
         switch (message[0]) {
             case 0:
                 if (message[1]) {
@@ -134,12 +137,7 @@ int main(int argc, char *argv[]) {
                     free(retrans);
                 }
                 else {
-                    message[rank + 6] = num_of_crits;
-
-                printf("[%i} : [%i], [%i], [%i], [%i], [%i], [%i], [%i], [%i], [%i]\n", 
-		                rank, message[0], message[1], message[2], message[3], message[4], message[5], message[6], message[7], message[8]);
-	
-
+                    message[rank + 5] = num_of_crits;
                     send_message(message, SIZE, rank + 1);
                 }
 
