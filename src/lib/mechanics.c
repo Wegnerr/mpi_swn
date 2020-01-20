@@ -23,7 +23,7 @@ u_int32_t send_message(int *message, int count, int dest){
 		MPI_Send(message, count, MPI_INT, dest, 0, MPI_COMM_WORLD);
 	}
 	else
-		printf("FAILED TO SEND FROM [%i]\n", dest);
+		printf("FAILED TO SEND TO [%i]\n", dest);
 	return 0;
 }
 

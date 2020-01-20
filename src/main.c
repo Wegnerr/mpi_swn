@@ -42,7 +42,7 @@ void* timeout(void *source) {
         message[0] = 1;
         message[3] = source_node;
         //printf("Sending detector to [%i]\n", source_node);
-        send_message(message, 1, source_node + 1);
+        send_message(message, SIZE, source_node + 1);
         free(message);
     return NULL;
 }
