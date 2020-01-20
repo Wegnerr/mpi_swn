@@ -13,11 +13,11 @@
 #define PROC_COUNT 4
 #define SIZE 9
 
-int received_message;
+static volatile int received_message;
 pthread_mutex_t lock;
 
 void* timeout(void *source) {
-    int msec, trigger, source_node; /* 500ms */
+    int volatile msec, trigger, source_node; /* 500ms */
     clock_t before;
     int *message;
 
@@ -29,21 +29,18 @@ void* timeout(void *source) {
  
             clock_t difference = clock() - before;
             msec = difference * 1000 / CLOCKS_PER_SEC;
-        
             pthread_mutex_lock(&lock);
             if(received_message > 0) {
-                msec = 0;
                 received_message = 0;
+                before = clock();
             }
             pthread_mutex_unlock(&lock);
-    
         } while ( msec < trigger );
-   
+        msec = 0;
         message = malloc(sizeof(int) * SIZE);
         memset(message, 0, SIZE * sizeof(int));
         message[0] = 1;
         message[3] = source_node;
-        printf("%i :: %i\n\n", message[3], source_node);
         //printf("Sending detector to [%i]\n", source_node);
         send_message(message, 1, source_node + 1);
         free(message);
@@ -93,7 +90,7 @@ int main(int argc, char *argv[]) {
     while (1) {
         memset(message, 0, 5 * sizeof(int));
         recv_message(message, SIZE, rank - 1);
-         printf("[%i} : [%i], [%i], [%i], [%i], [%i], [%i], [%i], [%i], [%i]\n", 
+         printf("R: [%i} : [%i], [%i], [%i], [%i], [%i], [%i], [%i], [%i], [%i]\n", 
 		                rank, message[0], message[1], message[2], message[3], message[4], message[5], message[6], message[7], message[8]);
 	
 
@@ -110,7 +107,7 @@ int main(int argc, char *argv[]) {
                 }
                 else {
                     //printf("[%i] Received retrans\n", rank);
-                    if (message[5] == rank) {
+                    if (message[4] == rank) {
                         int *token;
                         token = malloc(sizeof(int) * SIZE);
                         memset(token, 0, SIZE * sizeof(int));
@@ -126,13 +123,13 @@ int main(int argc, char *argv[]) {
             
             case 1:
                 //printf("[%i] Received detector\n", rank);
-                if (message[4] == rank) {
-                    target_node = find_max(message);
+                if (message[3] == rank) {
+                    target_node = find_max(message) - 5;
                     int *retrans;
                     retrans = malloc(sizeof(int) * SIZE);
                     memset(retrans, 0, SIZE * sizeof(int));
                     retrans[2] = 1;
-                    retrans[5] = target_node;
+                    retrans[4] = target_node;
                     send_message(retrans, SIZE, rank + 1);
                     free(retrans);
                 }
