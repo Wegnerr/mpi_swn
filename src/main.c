@@ -5,10 +5,13 @@
 #include <string.h>
 #include <unistd.h>
 #include "lib/mechanics.h"
-#include "lib/detector.h"
-#include "lib/msg.h"
-#include "lib/token.h"
-#include "lib/retrans.h"
+//#include "lib/detector.h"
+//#include "lib/msg.h"
+//#include "lib/token.h"
+//#include "lib/retrans.h"
+
+#define PROC_COUNT 4
+#define SIZE 9
 
 int received_message;
 pthread_mutex_t lock;
@@ -16,45 +19,47 @@ pthread_mutex_t lock;
 void* timeout(void *source) {
     int msec, trigger, source_node; /* 500ms */
     clock_t before;
-    struct msg* message;
+    int *message;
 
     source_node = *((int*) source);
     msec = 0;
     trigger = 5000;
     before = clock();
-    do {
+        do {
  
-        clock_t difference = clock() - before;
-        msec = difference * 1000 / CLOCKS_PER_SEC;
+            clock_t difference = clock() - before;
+            msec = difference * 1000 / CLOCKS_PER_SEC;
         
-        pthread_mutex_lock(&lock);
-        if(received_message > 0)
-            msec = 0;
-            received_message = 0;
-        pthread_mutex_unlock(&lock);
+            pthread_mutex_lock(&lock);
+            if(received_message > 0) {
+                msec = 0;
+                received_message = 0;
+            }
+            pthread_mutex_unlock(&lock);
     
-    } while ( msec < trigger );
+        } while ( msec < trigger );
    
-    message->tok = NULL;
-    message->detec = malloc(sizeof(struct detector));
-    message->type = MPI_DETEC;
-    memset(message->detec->proc_list, 0, PROC_COUNT);
-    message->detec->proc_id = source_node;
+        message = malloc(sizeof(int) * SIZE);
+        memset(message, 0, SIZE * sizeof(int));
+        message[0] = 1;
+        message[3] = source_node;
 
-    printf("Sending detector from [%i]\n", source_node);
-    send_message(message, 1, source_node + 1, 0);
+        //printf("Sending detector to [%i]\n", source_node);
+        send_message(message, 1, source_node + 1);
+        free(message);
     return NULL;
 }
 
 
 int main(int argc, char *argv[]) {
     int rank, size, dest, has_token, num_of_crits, target_node;
-    struct msg *message;
     pthread_t timeout_thread;
-
-    message = malloc(sizeof(struct msg));
+    int *message; // [detector, token, retrans, source, retr_source, [processes...]]
     // Initialize MPI environment
     MPI_Init (&argc, &argv);
+
+    message = malloc(sizeof(int) * SIZE);
+    memset(message, 0, SIZE * sizeof(int));
 
     // Get rank, size and processor name
     MPI_Comm_rank (MPI_COMM_WORLD, &rank);
@@ -72,87 +77,77 @@ int main(int argc, char *argv[]) {
     pthread_mutex_lock(&lock);
     received_message = 0; 
     pthread_mutex_unlock(&lock); 
-
-    message->detec = NULL;
-    message->retr = NULL;
-    message->tok = malloc(sizeof(struct token));
-    message->type = MPI_TOKEN;
-
     //TO-DO
     if (size < 2) {
-        fprintf(stderr, "Number of processes must be larger than 2 in order to run this example\n");
+        //fprintf(stderr, "Number of processes must be larger than 2 in order to run this example\n");
         MPI_Abort(MPI_COMM_WORLD, 1);
     }
     
     if (rank == 0) {
-        has_token = 1;
-        send_message(message, 1, rank + 1, 0);
-        has_token = 0;
+        message[1] = 1;
+        message[4] = rank;
+        send_message(message, SIZE, rank + 1);
+        num_of_crits += 1;
     }
     
     while (1) {
-        recv_message(message, 1, rank - 1);
+        memset(message, 0, SIZE * sizeof(int));
+        recv_message(message, SIZE, rank - 1);
         
-        switch (message->type) {
-            case MPI_DETEC:
-                if (message->detec->proc_id == rank) {
-                    target_node = find_max(message->detec->proc_list);
-                    message->detec = NULL;
-                    message->tok = NULL;
-                    message->retr = malloc(sizeof(struct retrans));
-                    message->type = MPI_RETRANS;
-                    send_message(message, 1, rank + 1, 0);
+        switch (message[0]) {
+            case 0:
+                if (message[1]) {
+                    //("[%i] Received token\n", rank);
+                    sleep(1);
+                    num_of_crits += 1;
+                    send_message(message, SIZE, rank + 1);
+                    pthread_mutex_lock(&lock);
+                    received_message = 1; 
+                    pthread_mutex_unlock(&lock); 
                 }
                 else {
-                    message->detec->proc_list[rank] = num_of_crits;
-                    send_message(message, 1, rank + 1, 0);
+                    //printf("[%i] Received retrans\n", rank);
+                    if (message[5] == rank) {
+                        int *token;
+                        token = malloc(sizeof(int) * SIZE);
+                        memset(token, 0, SIZE * sizeof(int));
+                        token[1] = 1;
+                        send_message(token, SIZE, rank + 1);
+                        free(token);
+                    }
+                    else 
+                        send_message(message, SIZE, rank + 1);
                 }
+
                 break;
             
-            case MPI_TOKEN:
-                num_of_crits += 1;
-                sleep(2);
-                send_message(message, 1, rank + 1, 0);
-                break;
-
-            case MPI_RETRANS:
-                if(message->retr->target_node == rank) {
-                    message->detec = NULL;
-                    message->retr = NULL;
-                    message->tok = malloc(sizeof(struct token));
-                    message->type = MPI_TOKEN;
-                    send_message(message, 1, rank + 1, 0);
+            case 1:
+                //printf("[%i] Received detector\n", rank);
+                if (message[4] == rank) {
+                    target_node = find_max(message);
+                    int *retrans;
+                    retrans = malloc(sizeof(int) * SIZE);
+                    memset(retrans, 0, SIZE * sizeof(int));
+                    retrans[2] = 1;
+                    retrans[5] = target_node;
+                    send_message(retrans, SIZE, rank + 1);
+                    free(retrans);
                 }
+                else {
+                    message[rank + 6] = num_of_crits;
+
+                printf("[%i} : [%i], [%i], [%i], [%i], [%i], [%i], [%i], [%i], [%i]\n", 
+		                rank, message[0], message[1], message[2], message[3], message[4], message[5], message[6], message[7], message[8]);
+	
+
+                    send_message(message, SIZE, rank + 1);
+                }
+
                 break;
 
         }
     }
-    /*
-    if (rank == 0) {
-        //message = 1;
-        MPI_Send(&message, 1, MPI_INT, rank+1, 0, MPI_COMM_WORLD);
-        //message = 0;
-        printf("[%i] Token sent to process %i\n",
-                rank, rank+1);
-        MPI_Recv(&message, 1, MPI_INT, size-1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-	sleep(1); //Print sync
-        printf("[%i] Token received from process %i\n",
-                rank, size-1);
-    } else {
-        MPI_Recv(&message, 1, MPI_INT, rank-1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-	sleep(1); //Print sync
-        printf("[%i] Token received from process %i\n",
-                rank, rank-1);
-        if (rank == size - 1)
-            dest = 0;
-        else
-            dest = rank + 1;
-        MPI_Send(&message, 1, MPI_INT, dest, 0, MPI_COMM_WORLD);
-        //message = 0;
-        printf("[%i] Token sent to process %i\n",
-                rank, dest);
-    } */
-    // Finalize MPI environment
+   
     MPI_Finalize();
     pthread_join(timeout_thread, NULL);
 
