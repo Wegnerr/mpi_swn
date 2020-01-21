@@ -49,12 +49,13 @@ void* timeout(void *source) {
 
 
 int main(int argc, char *argv[]) {
-    int rank, size, dest, has_token, num_of_crits, target_node;
+    int my_token, rank, size, dest, has_token, num_of_crits, target_node;
     pthread_t timeout_thread;
     int *message; // [detector, token, retrans, source, retr_source, [processes...]]
+    my_token = 0;
     // Initialize MPI environment
     MPI_Init (&argc, &argv);
-
+    
     message = malloc(sizeof(int) * SIZE);
     memset(message, 0, SIZE * sizeof(int));
 
@@ -81,6 +82,7 @@ int main(int argc, char *argv[]) {
     }
     
     if (rank == 0) {
+        my_token = 1;
         message[1] = 1;
         message[4] = rank;
         send_message(message, SIZE, rank + 1);
@@ -93,17 +95,21 @@ int main(int argc, char *argv[]) {
          printf("R: [%i} : [%i], [%i], [%i], [%i], [%i], [%i], [%i], [%i], [%i]\n", 
 		                rank, message[0], message[1], message[2], message[3], message[4], message[5], message[6], message[7], message[8]);
 	
-
         switch (message[0]) {
             case 0:
                 if (message[1]) {
                     //("[%i] Received token\n", rank);
                     sleep(1);
                     num_of_crits += 1;
-                    send_message(message, SIZE, rank + 1);
-                    pthread_mutex_lock(&lock);
-                    received_message = 1; 
-                    pthread_mutex_unlock(&lock); 
+                    message[1] +=1; //incrementing token
+                    if(my_token < message[1]){ //check if retransmited token is not obsolete
+                        my_token = message[1]; 
+                        message[1] = my_token;
+                        send_message(message, SIZE, rank + 1);
+                        pthread_mutex_lock(&lock);
+                        received_message = 1; 
+                        pthread_mutex_unlock(&lock); 
+                    }
                 }
                 else {
                     //printf("[%i] Received retrans\n", rank);
@@ -111,7 +117,7 @@ int main(int argc, char *argv[]) {
                         int *token;
                         token = malloc(sizeof(int) * SIZE);
                         memset(token, 0, SIZE * sizeof(int));
-                        token[1] = 1;
+                        token[1] = my_token; //!mamy wysylac zlecenie retransmisji a nie wysylac token
                         send_message(token, SIZE, rank + 1);
                         free(token);
                     }
@@ -134,7 +140,7 @@ int main(int argc, char *argv[]) {
                     free(retrans);
                 }
                 else {
-                    message[rank + 5] = num_of_crits;
+                    message[rank + 5] = my_token;
                     send_message(message, SIZE, rank + 1);
                 }
 
