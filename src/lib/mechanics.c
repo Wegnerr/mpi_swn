@@ -51,4 +51,3 @@ u_int32_t find_max(int node_list[]) {
 
     return index;
 }
-// [detector, token, retrans, source, retr_source, [processes...]]

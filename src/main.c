@@ -22,9 +22,10 @@ void* timeout(void *source) {
     int *message;
 
     source_node = *((int*) source);
-    msec = 0;
-    trigger = 10000;
-    before = clock();
+    while (1) {
+        msec = 0;
+        trigger = 10000;
+        before = clock();
         do {
  
             clock_t difference = clock() - before;
@@ -36,7 +37,6 @@ void* timeout(void *source) {
             }
             pthread_mutex_unlock(&lock);
         } while ( msec < trigger );
-        msec = 0;
         message = malloc(sizeof(int) * SIZE);
         memset(message, 0, SIZE * sizeof(int));
         message[0] = 1;
@@ -44,6 +44,7 @@ void* timeout(void *source) {
         //printf("Sending detector to [%i]\n", source_node);
         send_message(message, SIZE, source_node + 1);
         free(message);
+    }
     return NULL;
 }
 
@@ -75,9 +76,9 @@ int main(int argc, char *argv[]) {
     pthread_mutex_lock(&lock);
     received_message = 0; 
     pthread_mutex_unlock(&lock); 
-    //TO-DO
+    
     if (size < 2) {
-        //fprintf(stderr, "Number of processes must be larger than 2 in order to run this example\n");
+        printf("Too few processes\n");
         MPI_Abort(MPI_COMM_WORLD, 1);
     }
     
@@ -98,11 +99,10 @@ int main(int argc, char *argv[]) {
         switch (message[0]) {
             case 0:
                 if (message[1]) {
-                    //("[%i] Received token\n", rank);
                     sleep(1);
                     num_of_crits += 1;
                     message[1] +=1; //incrementing token
-                    if(my_token < message[1]){ //check if retransmited token is not obsolete
+                    if (my_token < message[1]){ //check if retransmited token is not obsolete
                         my_token = message[1]; 
                         message[1] = my_token;
                         send_message(message, SIZE, rank + 1);
@@ -112,12 +112,11 @@ int main(int argc, char *argv[]) {
                     }
                 }
                 else {
-                    //printf("[%i] Received retrans\n", rank);
                     if (message[4] == rank) {
                         int *token;
                         token = malloc(sizeof(int) * SIZE);
                         memset(token, 0, SIZE * sizeof(int));
-                        token[1] = my_token; //!mamy wysylac zlecenie retransmisji a nie wysylac token
+                        token[1] = my_token; 
                         send_message(token, SIZE, rank + 1);
                         free(token);
                     }
@@ -128,7 +127,6 @@ int main(int argc, char *argv[]) {
                 break;
             
             case 1:
-                //printf("[%i] Received detector\n", rank);
                 if (message[3] == rank) {
                     target_node = find_max(message) - 5;
                     int *retrans;
