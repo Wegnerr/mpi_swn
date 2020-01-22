@@ -5,19 +5,16 @@
 #include <string.h>
 #include <unistd.h>
 #include "lib/mechanics.h"
-//#include "lib/detector.h"
-//#include "lib/msg.h"
-//#include "lib/token.h"
-//#include "lib/retrans.h"
+
 
 #define PROC_COUNT 4
-#define SIZE 9
+#define SIZE (5 + PROC_COUNT) // 5  for message fields + 4 for processes
 
 static volatile int received_message;
 pthread_mutex_t lock;
 
 void* timeout(void *source) {
-    int volatile msec, trigger, source_node; /* 500ms */
+    int volatile msec, trigger, source_node;
     clock_t before;
     int *message;
 
@@ -27,21 +24,22 @@ void* timeout(void *source) {
         trigger = 10000;
         before = clock();
         do {
- 
             clock_t difference = clock() - before;
             msec = difference * 1000 / CLOCKS_PER_SEC;
             pthread_mutex_lock(&lock);
+
             if(received_message > 0) {
                 received_message = 0;
                 before = clock();
             }
+
             pthread_mutex_unlock(&lock);
         } while ( msec < trigger );
+
         message = malloc(sizeof(int) * SIZE);
         memset(message, 0, SIZE * sizeof(int));
         message[0] = 1;
         message[3] = source_node;
-        //printf("Sending detector to [%i]\n", source_node);
         send_message(message, SIZE, source_node + 1);
         free(message);
     }
@@ -54,6 +52,7 @@ int main(int argc, char *argv[]) {
     pthread_t timeout_thread;
     int *message; // [detector, token, retrans, source, retr_source, [processes...]]
     my_token = 0;
+
     // Initialize MPI environment
     MPI_Init (&argc, &argv);
     
@@ -65,7 +64,7 @@ int main(int argc, char *argv[]) {
     MPI_Comm_size (MPI_COMM_WORLD, &size);
 
     if (pthread_create(&timeout_thread, NULL, timeout, &rank)) {
-        fprintf(stderr, "Error creating thread\n");
+        printf("Error creating thread\n");
     return 1;
     }
 
@@ -78,7 +77,7 @@ int main(int argc, char *argv[]) {
     pthread_mutex_unlock(&lock); 
     
     if (size < 2) {
-        printf("Too few processes\n");
+        printf("Too few processes created\n");
         MPI_Abort(MPI_COMM_WORLD, 1);
     }
     
@@ -93,16 +92,15 @@ int main(int argc, char *argv[]) {
     while (1) {
         memset(message, 0, 5 * sizeof(int));
         recv_message(message, SIZE, rank - 1);
-         printf("R: [%i} : [%i], [%i], [%i], [%i], [%i], [%i], [%i], [%i], [%i]\n", 
-		                rank, message[0], message[1], message[2], message[3], message[4], message[5], message[6], message[7], message[8]);
-	
+        
+        //Handling types of messages
         switch (message[0]) {
             case 0:
                 if (message[1]) {
                     sleep(1);
                     num_of_crits += 1;
-                    message[1] +=1; //incrementing token
-                    if (my_token < message[1]){ //check if retransmited token is not obsolete
+                    message[1] +=1; //Incrementing token
+                    if (my_token < message[1]){ //Check if retransmited token is not obsolete
                         my_token = message[1]; 
                         message[1] = my_token;
                         send_message(message, SIZE, rank + 1);
@@ -112,6 +110,7 @@ int main(int argc, char *argv[]) {
                     }
                 }
                 else {
+                    //Retransmiting token
                     if (message[4] == rank) {
                         int *token;
                         token = malloc(sizeof(int) * SIZE);
@@ -127,6 +126,7 @@ int main(int argc, char *argv[]) {
                 break;
             
             case 1:
+                //Sending retransmision request
                 if (message[3] == rank) {
                     target_node = find_max(message) - 5;
                     int *retrans;
